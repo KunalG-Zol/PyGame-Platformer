@@ -5,10 +5,46 @@ from sys import exit
 
 # Display Score
 def display_score():
-    current_time = int((int(pygame.time.get_ticks())) / 1000)
+    current_time = int((pygame.time.get_ticks()) / 1000)
     score_surface = font.render(f'{current_time}', False, 'Black')
     score_rect = score_surface.get_rect(center=(640, 80))
     screen.blit(score_surface, score_rect)
+
+
+def player_animation():
+    global player_surf, player_index
+    if player_rect.bottom < 580:
+        player_surf = player_jump
+    else:
+        player_index += 0.1
+        if player_index >= len(player_walk):
+            player_index = 0
+        player_surf = player_walk[int(player_index)]
+
+
+def enemy_movement(enemy_list):
+    if enemy_list:
+        for enemy_rect in enemy_list:
+            enemy_rect.x -= 4
+
+            if enemy_rect.bottom == 580:
+                screen.blit(slime_surface, enemy_rect)
+            else:
+                screen.blit(bat_surface, enemy_rect)
+
+        enemy_list = [enemy for enemy in enemy_list if enemy.x > 0]
+
+        return enemy_list
+    else:
+        return []
+
+
+def collision(player, enemy_list):
+    if enemy_list:
+        for enemy in enemy_list:
+            if player.colliderect(enemy):
+                return False
+    return True
 
 
 # Main
@@ -28,13 +64,39 @@ background = pygame.image.load('Graphics/Main/Environment/bg_grasslands.png').co
 background = pygame.transform.scale(background, (1280, 720))
 ground = pygame.image.load('Graphics/Main/Environment/Ground.png')
 
+# Enemy Timer
+enemy_timer = pygame.USEREVENT + 1
+pygame.time.set_timer(enemy_timer, 900)
+
+slime_animation_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(slime_animation_timer, 500)
+
+bat_animation_timer = pygame.USEREVENT + 3
+pygame.time.set_timer(bat_animation_timer, 300)
+
 # Enemies
-slime_surface = pygame.image.load('Graphics/Main/Enemies/Slime/slimeGreen.png').convert_alpha()
-slime_rect = slime_surface.get_rect(midbottom=(1200, 580))
+slime_frame_1 = pygame.image.load('Graphics/Main/Enemies/Slime/slimeGreen.png').convert_alpha()
+slime_frame_2 = pygame.image.load('Graphics/Main/Enemies/Slime/slimeGreen_walk.png').convert_alpha()
+slime_frames = [slime_frame_1, slime_frame_2]
+slime_frame_index = 0
+slime_surface = slime_frames[slime_frame_index]
+
+bat_frame_1 = pygame.image.load('Graphics/Main/Enemies/Bat/bat.png').convert_alpha()
+bat_frame_2 = pygame.image.load('Graphics/Main/Enemies/Bat/bat_fly.png').convert_alpha()
+bat_frames = [bat_frame_1, bat_frame_2]
+bat_frame_index = 0
+bat_surface = bat_frames[bat_frame_index]
+
+enemy_rect_list = []
 
 # Player
-player_surface = pygame.image.load('Graphics/Main/Player/alienPink_walk1.png').convert_alpha()
-player_rect = player_surface.get_rect(midbottom=(150, 580))
+player_walk_1 = pygame.image.load('Graphics/Main/Player/alienPink_walk1.png').convert_alpha()
+player_walk_2 = pygame.image.load('Graphics/Main/Player/alienPink_walk2.png').convert_alpha()
+player_walk = [player_walk_1, player_walk_2]
+player_jump = pygame.image.load('Graphics/Main/Player/alienPink_jump.png').convert_alpha()
+player_index = 0
+player_surf = player_walk[player_index]
+player_rect = player_surf.get_rect(midbottom=(200, 580))
 player_gravity = 0
 
 # Start Screen
@@ -63,6 +125,12 @@ while True:
             if event.key == pygame.K_SPACE and not game_start:
                 game_start = True
 
+        if event.type == enemy_timer and game_active and game_start:
+            if random.randint(0, 2):
+                enemy_rect_list.append(slime_surface.get_rect(bottomright=(random.randint(1300, 1400), 580)))
+            else:
+                enemy_rect_list.append(bat_surface.get_rect(midbottom=(random.randint(1300, 1400), 400)))
+
     if game_active:
         if not game_start:
             screen.fill((227, 216, 16))
@@ -71,24 +139,39 @@ while True:
             screen.blit(press_space, press_space_rect)
 
         if game_start:
+            for event in pygame.event.get():
+                if event.type == slime_animation_timer:
+                    if slime_frame_index == 0:
+                        slime_frame_index = 1
+                    else:
+                        slime_frame_index = 0
+                    slime_surface = slime_frames[slime_frame_index]
+
+                if event.type == bat_animation_timer:
+                    if bat_frame_index == 0:
+                        bat_frame_index = 1
+                    else:
+                        bat_frame_index = 0
+                    bat_surface = bat_frames[bat_frame_index]
+
+            player_animation()
+            game_active = collision(player_rect, enemy_rect_list)
             screen.blit(background, (0, 0))
             screen.blit(ground, (0, 580))
             display_score()
-            slime_rect.x -= 4
-            if slime_rect.left < -50: slime_rect.x = 1300
-            screen.blit(slime_surface, slime_rect)
+            enemy_movement(enemy_rect_list)
 
             player_gravity += 1
             player_rect.y += player_gravity
             if player_rect.bottom >= 580:
                 player_rect.bottom = 580
 
-            screen.blit(player_surface, player_rect)
+            enemy_rect_list = enemy_movement(enemy_rect_list)
 
-            if slime_rect.colliderect(player_rect):
-                game_active = False
+            screen.blit(player_surf, player_rect)
 
     else:
+        enemy_rect_list.clear()
         screen.fill('Black')
         screen.blit(game_over, game_over_rect)
 
