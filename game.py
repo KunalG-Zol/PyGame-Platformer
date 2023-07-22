@@ -5,10 +5,11 @@ from sys import exit
 
 # Display Score
 def display_score():
-    current_time = int((pygame.time.get_ticks()) / 1000)
+    current_time = int(pygame.time.get_ticks() / 1000)
     score_surface = font.render(f'{current_time}', False, 'Black')
     score_rect = score_surface.get_rect(center=(640, 80))
     screen.blit(score_surface, score_rect)
+    return current_time
 
 
 def player_animation():
@@ -58,6 +59,7 @@ game_active = True
 game_start = False
 font = pygame.font.Font('rainyhearts.ttf', 72)
 font_small = pygame.font.Font('rainyhearts.ttf', 30)
+start_time = 0
 
 # Background
 background = pygame.image.load('Graphics/Main/Environment/bg_grasslands.png').convert()
@@ -109,6 +111,9 @@ press_space = font.render('Press SPACE To Start', False, 'White')
 press_space_rect = press_space.get_rect(center=(640, 600))
 
 # Game Over
+score = 0
+score_surf = font_small.render(f'Your Score: {score}', False, 'White')
+score_surf_rect = score_surf.get_rect(center=(640, 450))
 game_over = font.render('Game Over', False, 'White')
 game_over_rect = game_over.get_rect(center=(640, 360))
 
@@ -131,6 +136,20 @@ while True:
             else:
                 enemy_rect_list.append(bat_surface.get_rect(midbottom=(random.randint(1300, 1400), 400)))
 
+        if event.type == slime_animation_timer:
+            if slime_frame_index == 0:
+                slime_frame_index = 1
+            else:
+                slime_frame_index = 0
+            slime_surface = slime_frames[slime_frame_index]
+
+        if event.type == bat_animation_timer:
+            if bat_frame_index == 0:
+                bat_frame_index = 1
+            else:
+                bat_frame_index = 0
+            bat_surface = bat_frames[bat_frame_index]
+
     if game_active:
         if not game_start:
             screen.fill((227, 216, 16))
@@ -139,20 +158,6 @@ while True:
             screen.blit(press_space, press_space_rect)
 
         if game_start:
-            for event in pygame.event.get():
-                if event.type == slime_animation_timer:
-                    if slime_frame_index == 0:
-                        slime_frame_index = 1
-                    else:
-                        slime_frame_index = 0
-                    slime_surface = slime_frames[slime_frame_index]
-
-                if event.type == bat_animation_timer:
-                    if bat_frame_index == 0:
-                        bat_frame_index = 1
-                    else:
-                        bat_frame_index = 0
-                    bat_surface = bat_frames[bat_frame_index]
 
             player_animation()
             game_active = collision(player_rect, enemy_rect_list)
@@ -160,6 +165,8 @@ while True:
             screen.blit(ground, (0, 580))
             display_score()
             enemy_movement(enemy_rect_list)
+            score = display_score()
+            score_surf = font_small.render(f'Your Score: {score}', False, 'White')
 
             player_gravity += 1
             player_rect.y += player_gravity
@@ -174,6 +181,7 @@ while True:
         enemy_rect_list.clear()
         screen.fill('Black')
         screen.blit(game_over, game_over_rect)
+        screen.blit(score_surf, score_surf_rect)
 
     pygame.display.update()
     clock.tick(60)
